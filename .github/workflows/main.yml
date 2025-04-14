@@ -1,0 +1,33 @@
+name: Main
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Source Tag
+        run: |
+          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Build
+        if: github.ref_type == 'tag'
+        run: |
+          tar -czf godot-cpp.tar.gz godot-cpp
+          HASH=`sha256sum godot-cpp.tar.gz | cut -f 1 -d " "`
+          URL="https://github.com/${{ github.repository }}/releases/download/$SOURCE_TAG/godot-cpp.tar.gz"
+          cp godot-cpp.wrap_template godot-cpp.wrap
+          sed -i "s|PATCH_HASH|$HASH|g ; s|GODOT_VERSION|$SOURCE_TAG|g ; s|PATCH_URL|$URL|g" godot-cpp.wrap
+        env:
+          SOURCE_TAG: ${{ env.SOURCE_TAG }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: |
+            godot-cpp.tar.gz
+            godot-cpp.wrap

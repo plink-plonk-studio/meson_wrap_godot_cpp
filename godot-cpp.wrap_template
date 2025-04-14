@@ -1,0 +1,10 @@
+[wrap-git]
+url = https://github.com/godotengine/godot-cpp
+revision = GODOT_VERSION
+depth = 1
+patch_url = PATCH_URL
+patch_filename = godot-cpp.tar.gz
+patch_hash = PATCH_HASH
+
+[provide]
+godot_cpp = godot_cpp_dep
