@@ -6,8 +6,9 @@ import json
 import urllib.request
 import shutil
 import glob
+import re
 
-def get_latest_tagged_version(repo_owner, repo_name):
+def get_latest_tagged_version(repo_owner, repo_name)->str:
    
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/git/matching-refs/tags"
 
@@ -23,22 +24,21 @@ def get_latest_tagged_version(repo_owner, repo_name):
         print(f"Error fetching tags: {e}")
         return None
 
-def download_godot_cpp(version, output_dir):
+def download_repo(repo_url, version, output_dir)->bool:
     if os.path.exists(output_dir):
-        shutil.rmtree(output_dir) # TODO: warn?
+        shutil.rmtree(output_dir)
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    repo_url = "https://github.com/godotengine/godot-cpp"
     command = ["git", "clone", "--depth", "1", "--branch", version, repo_url, output_dir]
 
     try:
         subprocess.run(command, check=True, capture_output=True, text=True)
-        print(f"Downloaded Godot-CPP version {version} to {output_dir}")
+        print(f"Downloaded {repo_url.split('/')[-1]} version {version} to {output_dir}")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error downloading Godot-CPP: {e.stderr}")
+        print(f"Error downloading {repo_url}: {e.stderr}")
         return False
 
 
@@ -145,15 +145,146 @@ godot_cpp_dep = declare_dependency(include_directories: includes, link_with: god
 
     print(f"Generated meson.build")
 
+
+
+all_godot_include_files_no_third_party = []
+load_all_godot_headers = {}
+
+def find_mapping(godot_cpp_header):
+    header_filename = os.path.basename(godot_cpp_header)
+
+    search_string = header_filename.removesuffix('.hpp').removesuffix('.inc')
+    search_string_no_underscore = search_string.replace('_', '')
+    search_strings = [
+        f"\nclass {search_string} :",
+        f"\nclass {search_string} " + '{',
+        f"\nclass [[nodiscard]] {search_string} " + '{',
+        f"\nstruct {search_string} " + '{',
+        f"\nstruct [[nodiscard]] {search_string} " + '{',
+
+        f"\nclass {search_string_no_underscore} :",
+        f"\nclass {search_string_no_underscore} " + '{',
+        f"\nclass [[nodiscard]] {search_string_no_underscore} " + '{',
+        f"\nstruct {search_string_no_underscore} " + '{',
+        f"\nstruct [[nodiscard]] {search_string_no_underscore} " + '{'
+    ]
+            
+    for filename in all_godot_include_files_no_third_party:
+        # print(f"checking {filename} for {search_string}")
+        lowercase_file = load_all_godot_headers[filename]
+        for s in search_strings:
+            if s in lowercase_file: 
+                return ( godot_cpp_header, filename )
+        
+        if re.search(f'typedef\s.*\s{search_string};', lowercase_file) or re.search(f'typedef\s.*\s{search_string_no_underscore};', lowercase_file):
+            return ( godot_cpp_header, filename )
+    
+    all_godot_headers_lookup = { os.path.basename(x) : x for x in all_godot_include_files_no_third_party }
+
+    if (search_string + '.h') in all_godot_headers_lookup:
+        return ( godot_cpp_header, all_godot_headers_lookup[(search_string + '.h')] )
+    return ( godot_cpp_header, None )
+
+
+def generate_module_adaptor(godot_dir, godot_cpp_dir):
+    all_godot_cpp_include_files = []
+    for x in glob.glob(f'{godot_cpp_dir}/**/*.hpp', recursive=True) + glob.glob(f'{godot_cpp_dir}/**/*.h', recursive=True) + glob.glob(f'{godot_cpp_dir}/**/*.inc', recursive=True):
+        if '/test/' in x or '/gdextension/' in x or '/version.hpp' in x:
+            continue
+        all_godot_cpp_include_files.append(x) 
+
+
+    for x in glob.glob(f'{godot_dir}/**/*.hpp', recursive=True) + glob.glob(f'{godot_dir}/**/*.h', recursive=True):
+        if '/thirdparty/' in x or '/mono/' in x or '/drivers/' in x:
+            continue
+        all_godot_include_files_no_third_party.append(x)
+
+    # load in ALL the data 1m40 -> 1m13
+    print("Loading all the godot headers...")
+    for filename in all_godot_include_files_no_third_party:
+        # print(f"checking {filename} for {search_string}")
+        with open(filename, 'rb') as file:
+            lowercase_file = str(file.read().decode("utf-8","ignore")).lower()
+            load_all_godot_headers[filename] = lowercase_file
+            
+    print("Searching for mappings...")
+
+    # we need to try and match them
+    #mappings = []
+    #with ThreadPool(processes = 10) as pool:
+     #   mappings += pool.map(find_mapping, all_godot_cpp_include_files, chunksize=100)
+            
+    mappings = []
+    for godot_cpp_header in all_godot_cpp_include_files:
+        mappings.append(find_mapping(godot_cpp_header))
+
+
+
+    unmatched = [ x[0] for x in  filter( lambda x: x[1] == None, mappings ) ] 
+
+    godot_cpp_to_godot_mapping = dict(filter( lambda x: x[1] != None, mappings ))
+    
+
+    print('Unmatched:')
+    print('\n'.join(unmatched))
+
+
+    print(f"Total godot_cpp headers: {len(all_godot_cpp_include_files)}, found {len(godot_cpp_to_godot_mapping)} matching.")
+
+    for godot_cpp_path, godot_path in godot_cpp_to_godot_mapping.items():
+        output_path = godot_cpp_path.replace(f'{godot_cpp_dir}/gen/include/', '').replace(f'{godot_cpp_dir}/include/','')
+        output_path = 'godot-cpp/godot_cpp_module_adaptor/' + output_path
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        header_code = f"// GENERATED FILE\n\n#include <{godot_path.replace(godot_dir + '/','')}>\n"
+       
+        with open(output_path, "w") as output:
+            output.write(header_code)
+            output.close()
+
+    for unmatches_godot_cpp_path in unmatched:
+        output_path = unmatches_godot_cpp_path.replace(f'{godot_cpp_dir}/gen/include/', '').replace(f'{godot_cpp_dir}/include/','')
+        output_path = 'godot-cpp/godot_cpp_module_adaptor/' + output_path
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        header_code = "// GENERATED EMPTY FILE\n"
+
+        if os.path.basename(output_path) == 'godot.hpp':
+            header_code = """// GENERATED FILE
+
+#include <modules/register_module_types.h>
+
+namespace godot
+{
+}
+"""
+        with open(output_path, "w") as output:
+            output.write(header_code)
+            output.close()
+
+
 if __name__ == "__main__":
     godot_cpp_repo_directory = ".tmp_godot_cpp"
+    godot_repo_directory = ".tmp_godot"
 
     latest_tag = get_latest_tagged_version("godotengine", "godot-cpp")
 
     if latest_tag:
         print(f"Latest tagged version: {latest_tag}")
-        if download_godot_cpp(latest_tag, godot_cpp_repo_directory):
+        if download_repo("https://github.com/godotengine/godot-cpp", latest_tag, godot_cpp_repo_directory):
             generate_meson_build_file(latest_tag, godot_cpp_repo_directory)
+
+            godot_version = latest_tag.removeprefix('godot-')
+
+            print(f'Downloading godot {godot_version}')
+            if download_repo("https://github.com/godotengine/godot", godot_version, godot_repo_directory):
+                
+                generate_module_adaptor(godot_repo_directory, godot_cpp_repo_directory)
+                
+                shutil.rmtree(godot_repo_directory)
+            else:
+                print("Failed to download Godot.")
+
             shutil.rmtree(godot_cpp_repo_directory)
         else:
             print("Failed to download Godot-CPP.")
