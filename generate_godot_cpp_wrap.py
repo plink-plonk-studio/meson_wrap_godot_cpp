@@ -242,6 +242,8 @@ def generate_module_adaptor(godot_dir, godot_cpp_dir):
             output.write(header_code)
             output.close()
 
+    unmatched.append('gdextension_interface.h')
+
     for unmatches_godot_cpp_path in unmatched:
         output_path = unmatches_godot_cpp_path.replace(f'{godot_cpp_dir}/gen/include/', '').replace(f'{godot_cpp_dir}/include/','')
         output_path = 'godot-cpp/godot_cpp_module_adaptor/' + output_path
