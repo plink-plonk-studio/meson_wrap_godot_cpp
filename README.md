@@ -1,5 +1,9 @@
 # Godot CPP Meson Wrapper
 
+## WHy not use the WrapDB version?
+
+We provide additional patching to allow an extension to be built as an engine module as well.
+
 ## Usage
 
 Download the [godot-cpp.wrap](https://github.com/plink-plonk-studio/meson_wrap_godot_cpp/releases/latest/download/godot-cpp.wrap) for the release version you would like to use, and put it in your `subprojects` folder.
