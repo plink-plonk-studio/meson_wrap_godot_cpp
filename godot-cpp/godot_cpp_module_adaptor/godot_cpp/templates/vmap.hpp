@@ -1,3 +1,1 @@
-// GENERATED FILE
-
-#include <core/templates/vmap.h>
+// GENERATED EMPTY FILE

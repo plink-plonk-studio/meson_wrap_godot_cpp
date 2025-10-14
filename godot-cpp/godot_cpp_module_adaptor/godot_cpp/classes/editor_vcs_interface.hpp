@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_vcs_interface.h>
+#include <editor/version_control/editor_vcs_interface.h>

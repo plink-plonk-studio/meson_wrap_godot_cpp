@@ -166,7 +166,11 @@ def find_mapping(godot_cpp_header):
         f"\nclass {search_string_no_underscore} " + '{',
         f"\nclass [[nodiscard]] {search_string_no_underscore} " + '{',
         f"\nstruct {search_string_no_underscore} " + '{',
-        f"\nstruct [[nodiscard]] {search_string_no_underscore} " + '{'
+        f"\nstruct [[nodiscard]] {search_string_no_underscore} " + '{',
+
+        f"\nusing {search_string_no_underscore} = ",
+
+        f"namespace {search_string_no_underscore} " + '{'
     ]
             
     for filename in all_godot_include_files_no_third_party:
@@ -194,7 +198,7 @@ def generate_module_adaptor(godot_dir, godot_cpp_dir):
         all_godot_cpp_include_files.append(x) 
 
 
-    for x in glob.glob(f'{godot_dir}/**/*.hpp', recursive=True) + glob.glob(f'{godot_dir}/**/*.h', recursive=True):
+    for x in glob.glob(f'{godot_dir}/**/*.hpp', recursive=True) + glob.glob(f'{godot_dir}/**/*.h', recursive=True) + glob.glob(f'{godot_dir}/**/*.inc', recursive=True):
         if '/thirdparty/' in x or '/mono/' in x or '/drivers/' in x:
             continue
         all_godot_include_files_no_third_party.append(x)

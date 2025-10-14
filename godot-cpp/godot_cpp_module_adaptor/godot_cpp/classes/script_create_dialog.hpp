@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/script_create_dialog.h>
+#include <editor/script/script_create_dialog.h>

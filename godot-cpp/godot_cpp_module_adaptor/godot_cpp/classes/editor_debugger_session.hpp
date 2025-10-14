@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/plugins/editor_debugger_plugin.h>
+#include <editor/debugger/editor_debugger_plugin.h>

@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_settings.h>
+#include <editor/settings/editor_settings.h>

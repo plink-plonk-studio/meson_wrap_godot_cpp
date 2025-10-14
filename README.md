@@ -1,6 +1,6 @@
 # Godot CPP Meson Wrapper
 
-## WHy not use the WrapDB version?
+## Why not use the WrapDB version?
 
 We provide additional patching to allow an extension to be built as an engine module as well.
 

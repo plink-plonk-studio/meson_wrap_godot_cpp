@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_resource_picker.h>
+#include <editor/inspector/editor_resource_picker.h>

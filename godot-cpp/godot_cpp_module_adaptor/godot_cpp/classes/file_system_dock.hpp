@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/filesystem_dock.h>
+#include <editor/docks/filesystem_dock.h>

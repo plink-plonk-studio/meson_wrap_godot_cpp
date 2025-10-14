@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/plugins/node_3d_editor_gizmos.h>
+#include <editor/scene/3d/node_3d_editor_gizmos.h>

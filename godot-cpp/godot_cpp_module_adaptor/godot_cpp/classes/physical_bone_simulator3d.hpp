@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <scene/3d/physical_bone_simulator_3d.h>
+#include <scene/3d/physics/physical_bone_simulator_3d.h>

@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_resource_preview.h>
+#include <editor/inspector/editor_resource_preview.h>

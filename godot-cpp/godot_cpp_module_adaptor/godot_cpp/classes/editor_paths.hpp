@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_paths.h>
+#include <editor/file_system/editor_paths.h>

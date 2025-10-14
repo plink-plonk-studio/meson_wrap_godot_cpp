@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_inspector.h>
+#include <editor/inspector/editor_inspector.h>

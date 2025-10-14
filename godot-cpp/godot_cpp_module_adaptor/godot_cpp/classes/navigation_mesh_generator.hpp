@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <modules/navigation/3d/navigation_mesh_generator.h>
+#include <modules/navigation_3d/3d/navigation_mesh_generator.h>

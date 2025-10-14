@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/plugins/script_editor_plugin.h>
+#include <editor/script/script_editor_plugin.h>

@@ -1,3 +1,3 @@
 // GENERATED FILE
 
-#include <editor/editor_feature_profile.h>
+#include <editor/settings/editor_feature_profile.h>
