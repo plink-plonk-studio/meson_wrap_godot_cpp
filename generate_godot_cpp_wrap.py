@@ -77,14 +77,6 @@ project(
 cpp_compiler = meson.get_compiler('cpp')
 godot_precision = get_option('precision')
 
-# Disable warning: https://github.com/mesonbuild/meson/issues/13978
-warnings_to_suppress = ['-U_LIBCPP_ENABLE_ASSERTIONS']
-foreach p : warnings_to_suppress
-  if cpp_compiler.has_argument(p)
-    add_project_arguments(p, language: 'cpp')
-  endif
-endforeach
-
 godot_cpp_compiler_defines = [
   '-DDEBUG_ENABLED',
   '-DDEBUG_METHODS_ENABLED',
