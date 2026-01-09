@@ -20,7 +20,6 @@ endforeach
 
 godot_cpp_compiler_defines = [
   '-DDEBUG_ENABLED',
-  '-DDEBUG_METHODS_ENABLED',
   '-DGDEXTENSION',
   '-DHOT_RELOAD_ENABLED',
   '-DMACOS_ENABLED',
