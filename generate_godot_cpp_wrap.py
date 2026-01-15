@@ -289,8 +289,6 @@ def generate_module_adaptor(godot_dir, godot_cpp_dir):
             output.write(header_code)
             output.close()
 
-    unmatched.append('gdextension_interface.h')
-
     for unmatches_godot_cpp_path in unmatched:
         output_path = unmatches_godot_cpp_path.replace(f'{godot_cpp_dir}/gen/include/', '').replace(f'{godot_cpp_dir}/include/','')
         output_path = 'godot-cpp/godot_cpp_module_adaptor/' + output_path
@@ -334,7 +332,7 @@ def generate_gdextension_json(godot_directory, godot_cpp_repo_directory)->bool:
     try:
         subprocess.run(command, check=True, capture_output=True, text=True)
         
-        extension_files = [ "extension_api.json", "gdextension_interface.h", "gdextension_interface.json"]
+        extension_files = [ "extension_api.json", "gdextension_interface.json"]
 
         for f in extension_files:
             if os.path.exists(f):
