@@ -40,15 +40,41 @@ def download_repo(repo_url, version, output_dir)->bool:
     except subprocess.CalledProcessError as e:
         print(f"Error downloading {repo_url}: {e.stderr}")
         return False
+    
+def download_godot(godot_version, output_dir)->bool:
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    command = ["curl", "-L", "--output", f"{output_dir}/godot.zip", f"https://github.com/godotengine/godot/releases/download/{godot_version}/Godot_v{godot_version}_macos.universal.zip"]
+
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"Downloaded Godot version {godot_version} to {output_dir}")
+    
+        unzip_command = ["unzip", f"{output_dir}/godot.zip", "-d", output_dir]
+        try:
+            subprocess.run(unzip_command, check=True, capture_output=True, text=True)
+            print(f"Extracted Godot.")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error extracting Godot {godot_version}: {e.stderr}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error downloading Godot {godot_version}: {e.stderr}")
+    
+    return False
+        
+
 
 
 def generate_meson_build_file(godot_version, godot_cpp_folder):
 
-
     shutil.copyfile(os.path.join('godot-cpp', 'meson-bindings-generator.py'), os.path.join(godot_cpp_folder, 'meson-bindings-generator.py'))
    
     try:
-        command = ["python3", "meson-bindings-generator.py", "gdextension/extension_api-4-5.json", "gdextension/gdextension_interface.json", ".", "single"]
+        command = ["python3", "meson-bindings-generator.py", "gdextension/extension_api.json", "gdextension/gdextension_interface.json", ".", "single"]
         subprocess.run(command, check=True, capture_output=True, text=True, cwd=godot_cpp_repo_directory)
         print(f"Generated bindings")
     except subprocess.CalledProcessError as e:
@@ -121,7 +147,7 @@ if not fs.exists('gen/include/')
   message(f'Generating Godot classes by api.json. precison: @godot_precision@')
   run_command(
     './meson-bindings-generator.py',
-    'gdextension/extension_api-4-5.json',
+    'gdextension/extension_api.json',
     'gdextension/gdextension_interface.json',
     '.',
     godot_precision,
@@ -281,32 +307,85 @@ namespace godot
             output.write(header_code)
             output.close()
 
+def generate_gdextension_json(godot_directory)->bool:
+    godot_executable = f"{godot_directory}/Godot.app/Contents/MacOS/Godot"
+
+    if not os.path.exists(godot_executable):
+        print(f"Unable to find Godot at {godot_executable}.")
+        return False
+    
+    extension_api_destination_folder = "godot-cpp/gdextension"
+
+    if os.path.exists(extension_api_destination_folder):
+        shutil.rmtree(extension_api_destination_folder)
+
+    if not os.path.exists(extension_api_destination_folder):
+        os.makedirs(extension_api_destination_folder)
+
+
+    command = [godot_executable, "--dump-extension-api", "--dump-gdextension-interface"]
+
+    print("Dunmping api...")
+
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        
+        extension_files = [ "extension_api.json", "gdextension_interface.h", "gdextension_interface.json"]
+
+        for f in extension_files:
+            if os.path.exists(f):
+                shutil.move(f, f"{extension_api_destination_folder}/{f}")
+        
+        print("Successfully dumped api.")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to dump extension api: {e.stderr}")
+        return
+    return False
 
 if __name__ == "__main__":
     godot_cpp_repo_directory = ".tmp_godot_cpp"
-    godot_repo_directory = ".tmp_godot"
+    godot_repo_directory = ".tmp_godot_source"
+    godot_directory = ".tmp_godot"
 
-    latest_tag = get_latest_tagged_version("godotengine", "godot-cpp")
+    godot_version = get_latest_tagged_version("godotengine", "godot")
+    latest_godotcpp_tag = get_latest_tagged_version("godotengine", "godot-cpp")
+    latest_godotcpp_godot_version = latest_godotcpp_tag.removeprefix("godot-")
 
-    if latest_tag:
-        print(f"Latest tagged version: {latest_tag}")
-        if download_repo("https://github.com/godotengine/godot-cpp", 'master', godot_cpp_repo_directory): # latest_tag, godot_cpp_repo_directory):
-            
-            godot_version = '4.5.1-stable' # latest_tag.removeprefix('godot-')
-            
+    print(f"Checking latest tags: {godot_version} vs {latest_godotcpp_godot_version}")
+
+    if godot_version != latest_godotcpp_godot_version:
+        print("Latest godotcpp does not match, will base godot-cpp on master.")
+        latest_godotcpp_tag = "master"
+
+    print(f"Will use Godot {godot_version} and Godot-CPP {latest_godotcpp_tag}")
+
+    print("Downloading Godot-CPP")
+    downloaded_godot_cpp = download_repo("https://github.com/godotengine/godot-cpp", latest_godotcpp_tag, godot_cpp_repo_directory)
+
+    print("Downloading Godot")
+    downloaded_godot = download_godot(godot_version, godot_directory)
+
+    downloaded_godot_source = False
+
+    if downloaded_godot_cpp and downloaded_godot:
+        
+        if generate_gdextension_json(godot_directory):
+
             generate_meson_build_file(godot_version, godot_cpp_repo_directory)
 
-            print(f'Downloading godot {godot_version}')
-            if download_repo("https://github.com/godotengine/godot", godot_version, godot_repo_directory):
-                
-                generate_module_adaptor(godot_repo_directory, godot_cpp_repo_directory)
-                
-                shutil.rmtree(godot_repo_directory)
-            else:
-                print("Failed to download Godot.")
+            print("Downloading Godot source")
+            downloaded_godot_source = download_repo("https://github.com/godotengine/godot", godot_version, godot_repo_directory)
 
-            shutil.rmtree(godot_cpp_repo_directory)
-        else:
-            print("Failed to download Godot-CPP.")
+            generate_module_adaptor(godot_repo_directory, godot_cpp_repo_directory)
+
     else:
-        print("No tags found for the repository.")
+        print("Failed to download required files.")
+
+    if downloaded_godot:
+        shutil.rmtree(godot_directory)
+    if downloaded_godot_source:
+       shutil.rmtree(godot_repo_directory)
+    if downloaded_godot_cpp:
+      shutil.rmtree(godot_cpp_repo_directory)
+
