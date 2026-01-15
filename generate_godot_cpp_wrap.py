@@ -48,7 +48,7 @@ def generate_meson_build_file(godot_version, godot_cpp_folder):
     shutil.copyfile(os.path.join('godot-cpp', 'meson-bindings-generator.py'), os.path.join(godot_cpp_folder, 'meson-bindings-generator.py'))
    
     try:
-        command = ["python3", "meson-bindings-generator.py", "gdextension/extension_api.json", ".", "single"]
+        command = ["python3", "meson-bindings-generator.py", "gdextension/extension_api-4-5.json", "gdextension/gdextension_interface.json", ".", "single"]
         subprocess.run(command, check=True, capture_output=True, text=True, cwd=godot_cpp_repo_directory)
         print(f"Generated bindings")
     except subprocess.CalledProcessError as e:
@@ -63,7 +63,7 @@ def generate_meson_build_file(godot_version, godot_cpp_folder):
     core_sources.sort()
     core_sources = ',\n'.join(core_sources)
 
-    version_value = godot_version.split('-')[1]
+    version_value = godot_version.split('-')[0]
 
     meson_content = f"""# GENERATED FILE - DO NOT EDIT
 
@@ -77,15 +77,35 @@ project(
 cpp_compiler = meson.get_compiler('cpp')
 godot_precision = get_option('precision')
 
+is_windows = host_machine.system() == 'windows'
+is_mac = host_machine.system() == 'darwin' and host_machine.subsystem() == 'macos'
+
 godot_cpp_compiler_defines = [
-  '-DDEBUG_ENABLED',
-  '-DDEBUG_METHODS_ENABLED',
   '-DGDEXTENSION',
-  '-DHOT_RELOAD_ENABLED',
-  '-DMACOS_ENABLED',
-  '-DTHREADS_ENABLED',
-  '-DUNIX_ENABLED',
+  '-DTHREADS_ENABLED'
 ]
+
+
+if get_option('buildtype') == 'debug'
+  godot_cpp_compiler_defines += [
+    '-DDEBUG_ENABLED',
+    '-DHOT_RELOAD_ENABLED'
+  ]
+endif
+
+if is_mac
+  godot_cpp_compiler_defines += [
+    '-DMACOS_ENABLED',
+    '-DUNIX_ENABLED'
+  ]
+endif
+
+if is_windows
+  godot_cpp_compiler_defines += [
+    '-DWINDOWS_ENABLED'
+  ]
+endif
+
 foreach p : godot_cpp_compiler_defines
   if cpp_compiler.has_argument(p)
     add_project_arguments(p, language: 'cpp')
@@ -101,7 +121,8 @@ if not fs.exists('gen/include/')
   message(f'Generating Godot classes by api.json. precison: @godot_precision@')
   run_command(
     './meson-bindings-generator.py',
-    'gdextension/extension_api.json',
+    'gdextension/extension_api-4-5.json',
+    'gdextension/gdextension_interface.json',
     '.',
     godot_precision,
     check: true,
@@ -269,10 +290,11 @@ if __name__ == "__main__":
 
     if latest_tag:
         print(f"Latest tagged version: {latest_tag}")
-        if download_repo("https://github.com/godotengine/godot-cpp", latest_tag, godot_cpp_repo_directory):
-            generate_meson_build_file(latest_tag, godot_cpp_repo_directory)
-
-            godot_version = latest_tag.removeprefix('godot-')
+        if download_repo("https://github.com/godotengine/godot-cpp", 'master', godot_cpp_repo_directory): # latest_tag, godot_cpp_repo_directory):
+            
+            godot_version = '4.5.1-stable' # latest_tag.removeprefix('godot-')
+            
+            generate_meson_build_file(godot_version, godot_cpp_repo_directory)
 
             print(f'Downloading godot {godot_version}')
             if download_repo("https://github.com/godotengine/godot", godot_version, godot_repo_directory):

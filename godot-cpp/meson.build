@@ -3,29 +3,42 @@
 project(
   'godot-cpp',
   'cpp',
-  version: '4.5',
+  version: '4.5.1',
   default_options: ['cpp_std=c++17', 'cpp_eh=none'],
 )
 
 cpp_compiler = meson.get_compiler('cpp')
 godot_precision = get_option('precision')
 
-# Disable warning: https://github.com/mesonbuild/meson/issues/13978
-warnings_to_suppress = ['-U_LIBCPP_ENABLE_ASSERTIONS']
-foreach p : warnings_to_suppress
-  if cpp_compiler.has_argument(p)
-    add_project_arguments(p, language: 'cpp')
-  endif
-endforeach
+is_windows = host_machine.system() == 'windows'
+is_mac = host_machine.system() == 'darwin' and host_machine.subsystem() == 'macos'
 
 godot_cpp_compiler_defines = [
-  '-DDEBUG_ENABLED',
   '-DGDEXTENSION',
-  '-DHOT_RELOAD_ENABLED',
-  '-DMACOS_ENABLED',
-  '-DTHREADS_ENABLED',
-  '-DUNIX_ENABLED',
+  '-DTHREADS_ENABLED'
 ]
+
+
+if get_option('buildtype') == 'debug'
+  godot_cpp_compiler_defines += [
+    '-DDEBUG_ENABLED',
+    '-DHOT_RELOAD_ENABLED'
+  ]
+endif
+
+if is_mac
+  godot_cpp_compiler_defines += [
+    '-DMACOS_ENABLED',
+    '-DUNIX_ENABLED'
+  ]
+endif
+
+if is_windows
+  godot_cpp_compiler_defines += [
+    '-DWINDOWS_ENABLED'
+  ]
+endif
+
 foreach p : godot_cpp_compiler_defines
   if cpp_compiler.has_argument(p)
     add_project_arguments(p, language: 'cpp')
@@ -41,7 +54,8 @@ if not fs.exists('gen/include/')
   message(f'Generating Godot classes by api.json. precison: @godot_precision@')
   run_command(
     './meson-bindings-generator.py',
-    'gdextension/extension_api.json',
+    'gdextension/extension_api-4-5.json',
+    'gdextension/gdextension_interface.json',
     '.',
     godot_precision,
     check: true,
@@ -1026,6 +1040,7 @@ generated_sources = [
   './gen/src/classes/xrvrs.cpp',
   './gen/src/classes/zip_packer.cpp',
   './gen/src/classes/zip_reader.cpp',
+  './gen/src/gdextension_interface_loader.cpp',
   './gen/src/variant/array.cpp',
   './gen/src/variant/callable.cpp',
   './gen/src/variant/dictionary.cpp',
