@@ -274,6 +274,10 @@ def generate_module_adaptor(godot_dir, godot_cpp_dir):
 
     print(f"Total godot_cpp headers: {len(all_godot_cpp_include_files)}, found {len(godot_cpp_to_godot_mapping)} matching.")
 
+    
+    if os.path.exists("godot-cpp/godot_cpp_module_adaptor"):
+        shutil.rmtree("godot-cpp/godot_cpp_module_adaptor")
+
     for godot_cpp_path, godot_path in godot_cpp_to_godot_mapping.items():
         output_path = godot_cpp_path.replace(f'{godot_cpp_dir}/gen/include/', '').replace(f'{godot_cpp_dir}/include/','')
         output_path = 'godot-cpp/godot_cpp_module_adaptor/' + output_path
@@ -307,7 +311,7 @@ namespace godot
             output.write(header_code)
             output.close()
 
-def generate_gdextension_json(godot_directory)->bool:
+def generate_gdextension_json(godot_directory, godot_cpp_repo_directory)->bool:
     godot_executable = f"{godot_directory}/Godot.app/Contents/MacOS/Godot"
 
     if not os.path.exists(godot_executable):
@@ -334,6 +338,7 @@ def generate_gdextension_json(godot_directory)->bool:
 
         for f in extension_files:
             if os.path.exists(f):
+                shutil.copy(f, f"{godot_cpp_repo_directory}/gdextension/{f}")
                 shutil.move(f, f"{extension_api_destination_folder}/{f}")
         
         print("Successfully dumped api.")
@@ -370,7 +375,7 @@ if __name__ == "__main__":
 
     if downloaded_godot_cpp and downloaded_godot:
         
-        if generate_gdextension_json(godot_directory):
+        if generate_gdextension_json(godot_directory, godot_cpp_repo_directory):
 
             generate_meson_build_file(godot_version, godot_cpp_repo_directory)
 
