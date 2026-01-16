@@ -283,7 +283,7 @@ def generate_module_adaptor(godot_dir, godot_cpp_dir):
         output_path = 'godot-cpp/godot_cpp_module_adaptor/' + output_path
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        header_code = f"// GENERATED FILE\n\n#include <{godot_path.replace(godot_dir + '/','')}>\n"
+        header_code = f"// GENERATED FILE\n\n#pragma once\n\n#include <godot_cpp/godot.hpp>\n\n#include <{godot_path.replace(godot_dir + '/','')}>\n"
        
         with open(output_path, "w") as output:
             output.write(header_code)
@@ -298,11 +298,18 @@ def generate_module_adaptor(godot_dir, godot_cpp_dir):
 
         if os.path.basename(output_path) == 'godot.hpp':
             header_code = """// GENERATED FILE
+#pragma once
 
 #include <modules/register_module_types.h>
+#include <core/string/print_string.h>
 
 namespace godot
 {
+template <typename... Args>
+void print_error(Args... p_args) {
+	Variant variants[sizeof...(p_args)] = { p_args... };
+	print_error(stringify_variants(Span(variants)));
+}
 }
 """
         with open(output_path, "w") as output:
