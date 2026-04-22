@@ -311,19 +311,7 @@ void print_error(Args... p_args) {
 	print_error(stringify_variants(Span(variants)));
 }
 }
-
-#ifdef GODOT_MODULE
 #define FORWARD_DECLARE_GODOT(X) X;
-#else
-#define FORWARD_DECLARE_GODOT(X) namespace godot { X; }
-#endif
-
-
-#ifndef GODOT_MODULE
-// This is in core/string/string_name.h in Godot
-#define SNAME(m_arg) ([]() -> const StringName & { static StringName sname = StringName(m_arg, true); return sname; })()
-#endif
-
 """
         with open(output_path, "w") as output:
             output.write(header_code)
@@ -341,8 +329,7 @@ def generate_gdextension_json(godot_directory, godot_cpp_repo_directory)->bool:
     if os.path.exists(extension_api_destination_folder):
         shutil.rmtree(extension_api_destination_folder)
 
-    if not os.path.exists(extension_api_destination_folder):
-        os.makedirs(extension_api_destination_folder)
+    os.makedirs(extension_api_destination_folder, exist_ok=True)
 
 
     command = [godot_executable, "--dump-extension-api", "--dump-gdextension-interface"]
@@ -365,6 +352,16 @@ def generate_gdextension_json(godot_directory, godot_cpp_repo_directory)->bool:
         print(f"Failed to dump extension api: {e.stderr}")
         return
     return False
+
+def patch_godot_cpp(godot_cpp_repo_directory):
+    target_path = os.path.join('godot-cpp', 'include', 'godot_cpp', 'godot.hpp')
+
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+    shutil.copyfile(os.path.join(godot_cpp_repo_directory, 'include', 'godot_cpp', 'godot.hpp'), target_path)
+    
+    with open(target_path, "a") as target:
+        target.write("#include \"plink_godot_cpp_patches.h\"")
 
 if __name__ == "__main__":
     godot_cpp_repo_directory = ".tmp_godot_cpp"
@@ -402,6 +399,7 @@ if __name__ == "__main__":
 
             generate_module_adaptor(godot_repo_directory, godot_cpp_repo_directory)
 
+            patch_godot_cpp(godot_cpp_repo_directory)
     else:
         print("Failed to download required files.")
 
