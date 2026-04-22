@@ -4,4 +4,4 @@
 
 #include <godot_cpp/godot.hpp>
 
-#include <servers/text_server.h>
+#include <servers/text/text_server.h>

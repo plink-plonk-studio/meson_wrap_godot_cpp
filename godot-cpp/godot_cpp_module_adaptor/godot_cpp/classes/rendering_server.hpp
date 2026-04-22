@@ -4,4 +4,4 @@
 
 #include <godot_cpp/godot.hpp>
 
-#include <servers/rendering_server.h>
+#include <servers/rendering/rendering_server.h>

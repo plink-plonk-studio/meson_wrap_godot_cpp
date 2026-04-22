@@ -4,4 +4,4 @@
 
 #include <godot_cpp/godot.hpp>
 
-#include <servers/camera_server.h>
+#include <servers/camera/camera_server.h>

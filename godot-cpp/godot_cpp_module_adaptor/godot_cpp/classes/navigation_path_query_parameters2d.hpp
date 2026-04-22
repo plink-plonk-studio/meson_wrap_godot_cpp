@@ -4,4 +4,4 @@
 
 #include <godot_cpp/godot.hpp>
 
-#include <servers/navigation/navigation_path_query_parameters_2d.h>
+#include <servers/navigation_2d/navigation_path_query_parameters_2d.h>
